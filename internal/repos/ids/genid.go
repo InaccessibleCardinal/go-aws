@@ -1,4 +1,4 @@
-package repos
+package ids
 
 import (
 	"math/rand"
@@ -6,8 +6,6 @@ import (
 
 	"github.com/oklog/ulid"
 )
-
-type GenId func(string) string
 
 func CreateId(prefix string) string {
 	t := time.Unix(10000000, 0)

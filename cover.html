@@ -1,0 +1,714 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>cmd: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">go-aws/cmd/main.go (0.0%)</option>
+				
+				<option value="file1">go-aws/internal/app/app.go (0.0%)</option>
+				
+				<option value="file2">go-aws/internal/conf/aws.go (0.0%)</option>
+				
+				<option value="file3">go-aws/internal/controllers/responses.go (100.0%)</option>
+				
+				<option value="file4">go-aws/internal/controllers/users.go (77.4%)</option>
+				
+				<option value="file5">go-aws/internal/env/load.go (0.0%)</option>
+				
+				<option value="file6">go-aws/internal/parsers/jsonparser.go (75.0%)</option>
+				
+				<option value="file7">go-aws/internal/repos/dynamo/dynamo.go (0.0%)</option>
+				
+				<option value="file8">go-aws/internal/repos/genid.go (0.0%)</option>
+				
+				<option value="file9">go-aws/internal/repos/users/init.go (0.0%)</option>
+				
+				<option value="file10">go-aws/internal/repos/users/mapfuncs.go (0.0%)</option>
+				
+				<option value="file11">go-aws/internal/repos/users/usersdb.go (0.0%)</option>
+				
+				<option value="file12">go-aws/internal/services/cognito/cognito.go (0.0%)</option>
+				
+				<option value="file13">go-aws/internal/services/cognito/initcognito.go (0.0%)</option>
+				
+				<option value="file14">go-aws/internal/services/cognito/secureremotepassword.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "go-aws/internal/app"
+        "go-aws/internal/env"
+        "log"
+)
+
+func main() <span class="cov0" title="0">{
+        env.Load(".env")
+        if err := app.Run(); err != nil </span><span class="cov0" title="0">{
+                log.Fatal("error starting app: ", err)
+        }</span>
+
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package app
+
+import (
+        "context"
+        "go-aws/internal/controllers"
+        "go-aws/internal/env"
+        usersRepo "go-aws/internal/repos/users"
+        "go-aws/internal/routers/types"
+        "net/http"
+
+        "github.com/go-chi/chi/middleware"
+        "github.com/go-chi/chi/v5"
+)
+
+type App struct {
+        usersController *controllers.UsersController
+        router          types.Router
+}
+
+func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        a.router.ServeHTTP(w, r)
+}</span>
+
+func (a *App) routes() <span class="cov0" title="0">{
+        a.router.Use(middleware.RequestID)
+        a.router.Use(middleware.Logger)
+        a.router.Use(middleware.Recoverer)
+        a.router.Use(middleware.URLFormat)
+
+        a.router.Get("/users/{id}", a.usersController.GetUser)
+        a.router.Put("/users", a.usersController.PutUser)
+}</span>
+
+func New(router types.Router, usersController *controllers.UsersController) *App <span class="cov0" title="0">{
+        return &amp;App{router: router, usersController: usersController}
+}</span>
+
+func Run() error <span class="cov0" title="0">{
+        env.Load(".env")
+        ctx := context.Background()
+        usersController := controllers.NewUsersController(usersRepo.InitUsersDB(ctx))
+        app := New(chi.NewRouter(), usersController)
+
+        app.routes()
+        if err := http.ListenAndServe(":8888", app); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package conf
+
+import (
+        "context"
+        "log"
+
+        "github.com/aws/aws-sdk-go-v2/aws"
+        "github.com/aws/aws-sdk-go-v2/config"
+)
+
+func GetConfig(ctx context.Context) aws.Config <span class="cov0" title="0">{
+        conf, err := config.LoadDefaultConfig(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("failed to create config %s\n", err)
+        }</span>
+        <span class="cov0" title="0">return conf</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package controllers
+
+import (
+        "encoding/json"
+        "fmt"
+        "net/http"
+)
+
+func ErrorResponse(w http.ResponseWriter, err error) <span class="cov8" title="1">{
+        w.WriteHeader(http.StatusBadRequest)
+        w.Write([]byte(fmt.Sprintf("Bad Request: %s", err)))
+}</span>
+
+func SuccessResponse(w http.ResponseWriter, obj any) <span class="cov8" title="1">{
+        marshaled, _ := json.Marshal(obj)
+        w.Header().Add("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        w.Write(marshaled)
+}</span>
+
+func CreatedResponse(w http.ResponseWriter, obj any) <span class="cov8" title="1">{
+        marshaled, _ := json.Marshal(obj)
+        w.Header().Add("Content-Type", "application/json")
+        w.WriteHeader(http.StatusCreated)
+        w.Write(marshaled)
+}</span>
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package controllers
+
+import (
+        "encoding/json"
+        "go-aws/internal/repos/users"
+        "go-aws/internal/types"
+        "io"
+        "net/http"
+        "strings"
+)
+
+type UsersController struct {
+        db users.UserDbIface
+}
+
+func NewUsersController(db users.UserDbIface) *UsersController <span class="cov8" title="1">{
+        return &amp;UsersController{db: db}
+}</span>
+
+func (u *UsersController) GetUser(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        id := getId(r.URL.Path)
+        user, err := u.db.GetUser(id)
+        if err != nil </span><span class="cov8" title="1">{
+                ErrorResponse(w, err)
+                return
+        }</span>
+        <span class="cov8" title="1">SuccessResponse(w, user)</span>
+}
+
+func (u *UsersController) PutUser(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        user, err := getUserFromBody(r.Body, io.ReadAll)
+        if err != nil </span><span class="cov0" title="0">{
+                ErrorResponse(w, err)
+                return
+        }</span>
+        <span class="cov8" title="1">err = u.db.PutUser(*user)
+        if err != nil </span><span class="cov0" title="0">{
+                ErrorResponse(w, err)
+                return
+        }</span>
+        <span class="cov8" title="1">CreatedResponse(w, map[string]string{"message": "user created"})</span>
+}
+
+func getId(path string) string <span class="cov8" title="1">{
+        parts := strings.Split(path, "/")
+        return parts[1]
+}</span>
+
+func getUserFromBody(body io.ReadCloser, reader BodyReader) (*types.UserRecord, error) <span class="cov8" title="1">{
+        defer body.Close()
+        bts, err := reader(body)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">parsedUser, err := parseUser(bts)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return parsedUser, nil</span>
+}
+
+func parseUser(userBytes []byte) (*types.UserRecord, error) <span class="cov8" title="1">{
+        var user types.UserRecord
+        err := json.Unmarshal(userBytes, &amp;user)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov8" title="1">return &amp;user, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package env
+
+import (
+        "os"
+        "strings"
+)
+
+func Load(pathToEnv string) <span class="cov0" title="0">{
+        bts, err := os.ReadFile(pathToEnv)
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov0" title="0">txt := string(bts)
+        for _, line := range strings.Split(txt, "\n") </span><span class="cov0" title="0">{
+                parts := strings.Split(line, "=")
+                os.Setenv(parts[0], strings.ReplaceAll(strings.TrimSpace(parts[1]), "'", ""))
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package parsers
+
+import (
+        "encoding/json"
+        "log"
+)
+
+func MustParseJson[T any](bts []byte) T <span class="cov8" title="1">{
+        var thing T
+        if err := json.Unmarshal(bts, &amp;thing); err != nil </span><span class="cov0" title="0">{
+                log.Fatalf("failed to parse, check yourself: %s", err.Error())
+        }</span>
+        <span class="cov8" title="1">return thing</span>
+}</pre>
+		
+		<pre class="file" id="file7" style="display: none">package dynamo
+
+import (
+        "context"
+
+        "github.com/aws/aws-sdk-go-v2/aws"
+        db "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+)
+
+func GetClient(cfg aws.Config) *db.Client <span class="cov0" title="0">{
+        return db.NewFromConfig(cfg)
+}</span>
+
+type DynamoIface interface {
+        DeleteItem(context.Context, *db.DeleteItemInput, ...func(*db.Options)) (*db.DeleteItemOutput, error)
+        GetItem(context.Context, *db.GetItemInput, ...func(*db.Options)) (*db.GetItemOutput, error)
+        PutItem(context.Context, *db.PutItemInput, ...func(*db.Options)) (*db.PutItemOutput, error)
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package repos
+
+import (
+        "math/rand"
+        "time"
+
+        "github.com/oklog/ulid"
+)
+
+type GenId func(string) string
+
+func CreateId(prefix string) string <span class="cov0" title="0">{
+        t := time.Unix(10000000, 0)
+        entropy := ulid.Monotonic(rand.New(rand.NewSource(t.UnixNano())), 0)
+        return prefix + ulid.MustNew(ulid.Timestamp(t), entropy).String()
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package users
+
+import (
+        "context"
+        "go-aws/internal/conf"
+        "go-aws/internal/repos"
+        "go-aws/internal/repos/dynamo"
+)
+
+func InitUsersDB(ctx context.Context) UserDbIface <span class="cov0" title="0">{
+        idGenerator := repos.CreateId
+        cfg := conf.GetConfig(ctx)
+        client := dynamo.GetClient(cfg)
+
+        return New(ctx, client, idGenerator)
+}</span>
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package users
+
+import (
+        "go-aws/internal/types"
+        "log"
+        "os"
+
+        "github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+        dbTypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+)
+
+func userToAttributeValueMap(user types.UserRecord) (map[string]dbTypes.AttributeValue, error) <span class="cov0" title="0">{
+        av, err := attributevalue.MarshalMap(user)
+        if err != nil </span><span class="cov0" title="0">{
+                log.Println("error marshaling user", err)
+                return av, err
+        }</span>
+        <span class="cov0" title="0">av["ORGID"] = &amp;dbTypes.AttributeValueMemberS{Value: os.Getenv("ORGID")}
+        return av, nil</span>
+}
+
+func userFromAttributeValueMap(attrMap map[string]dbTypes.AttributeValue) (*types.UserRecord, error) <span class="cov0" title="0">{
+        var user types.UserRecord
+        err := attributevalue.UnmarshalMap(attrMap, &amp;user)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return &amp;user, nil</span>
+}
+
+func idToAttributeValue(userId string) map[string]dbTypes.AttributeValue <span class="cov0" title="0">{
+        return map[string]dbTypes.AttributeValue{
+                "ORGID":  &amp;dbTypes.AttributeValueMemberS{Value: "ORGID#01HRR1VZRMQDJZR4FAP4M2ZF9V"},
+                "USERID": &amp;dbTypes.AttributeValueMemberS{Value: userId}}
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package users
+
+import (
+        "context"
+        "encoding/json"
+        "go-aws/internal/repos"
+        "go-aws/internal/repos/dynamo"
+        "go-aws/internal/types"
+        "os"
+
+        "github.com/aws/aws-sdk-go-v2/service/dynamodb"
+)
+
+type UserDbIface interface {
+        GetUser(userId string) (*types.UserRecord, error)
+        PutUser(rawUser types.UserRecord) error
+        RemoveUser(userId string) error
+}
+
+type UserDb struct {
+        client      dynamo.DynamoIface
+        ctx         context.Context
+        idGenerator repos.GenId
+        tableName   string
+}
+
+func (d *UserDb) PutUser(user types.UserRecord) error <span class="cov0" title="0">{
+        user.UserId = d.idGenerator("USER#")
+        marshaledUser, err := userToAttributeValueMap(user)
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">_, err = d.client.PutItem(d.ctx, &amp;dynamodb.PutItemInput{
+                Item:      marshaledUser,
+                TableName: &amp;d.tableName,
+        })
+        return err</span>
+}
+
+func (d *UserDb) GetUser(userId string) (*types.UserRecord, error) <span class="cov0" title="0">{
+        out, err := d.client.GetItem(d.ctx, &amp;dynamodb.GetItemInput{Key: idToAttributeValue(userId), TableName: &amp;d.tableName})
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if out.Item == nil </span><span class="cov0" title="0">{
+                return nil, nil
+        }</span>
+        <span class="cov0" title="0">user, err := userFromAttributeValueMap(out.Item)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return user, nil</span>
+}
+
+func (d *UserDb) RemoveUser(userId string) error <span class="cov0" title="0">{
+        _, err := d.client.DeleteItem(d.ctx, &amp;dynamodb.DeleteItemInput{
+                Key: idToAttributeValue(userId), TableName: &amp;d.tableName})
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+        <span class="cov0" title="0">return nil</span>
+}
+
+func New(ctx context.Context, client dynamo.DynamoIface, genId repos.GenId) UserDbIface <span class="cov0" title="0">{
+        return &amp;UserDb{ctx: ctx, client: client, idGenerator: genId, tableName: os.Getenv("AWS_DYNAMO_TABLE")}
+}</span>
+
+func SaveJson(data any) <span class="cov0" title="0">{
+        bts, _ := json.Marshal(data)
+        os.WriteFile("response.json", bts, 0777)
+}</span>
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package cognito
+
+import (
+        "context"
+        "crypto/hmac"
+        "crypto/sha256"
+        "encoding/base64"
+        "encoding/json"
+        "errors"
+        "go-aws/internal/types"
+        "os"
+        "time"
+
+        "github.com/aws/aws-sdk-go-v2/aws"
+        cog "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
+        cogTypes "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
+)
+
+type CognitoProviderIface interface {
+        AssociateSoftwareToken(
+                context.Context,
+                *cog.AssociateSoftwareTokenInput,
+                ...func(*cog.Options)) (*cog.AssociateSoftwareTokenOutput, error)
+        ConfirmSignUp(context.Context, *cog.ConfirmSignUpInput, ...func(*cog.Options)) (*cog.ConfirmSignUpOutput, error)
+        InitiateAuth(context.Context, *cog.InitiateAuthInput, ...func(*cog.Options)) (*cog.InitiateAuthOutput, error)
+        RespondToAuthChallenge(
+                context.Context,
+                *cog.RespondToAuthChallengeInput,
+                ...func(*cog.Options)) (*cog.RespondToAuthChallengeOutput, error)
+        SignUp(context.Context, *cog.SignUpInput, ...func(*cog.Options)) (*cog.SignUpOutput, error)
+}
+
+type CsrpIface interface {
+        GetAuthParams() map[string]string
+        PasswordVerifierChallenge(map[string]string, time.Time) (map[string]string, error)
+}
+
+type CognitoAuthTokens struct {
+        AccessToken  string
+        IdToken      string
+        RefreshToken string
+}
+
+type CognitoSecret struct {
+        SecretCode string
+        Session    string
+}
+
+type CognitoService struct {
+        client       CognitoProviderIface
+        clientId     string
+        clientSecret string
+        getCsrp      func(string, string) (CsrpIface, error)
+        csrp         CsrpIface
+        ctx          context.Context
+}
+
+func (c *CognitoService) setCsrp(userName, password string) <span class="cov0" title="0">{
+        if c.csrp == nil </span><span class="cov0" title="0">{
+                csrp, err := c.getCsrp(userName, password)
+                if err != nil </span><span class="cov0" title="0">{
+                        panic(err)</span>
+                }
+                <span class="cov0" title="0">c.csrp = csrp</span>
+        }
+}
+
+func (c *CognitoService) RegisterUser(user types.UserRecord, password string) (bool, error) <span class="cov0" title="0">{
+        out, err := c.client.SignUp(c.ctx, &amp;cog.SignUpInput{
+                ClientId:       aws.String(c.clientId),
+                Password:       aws.String(password),
+                Username:       aws.String(user.UserName),
+                UserAttributes: []cogTypes.AttributeType{{Name: aws.String("email"), Value: aws.String(user.Email)}},
+                SecretHash:     aws.String(computeSecretHash(c.clientSecret, user.UserName, c.clientId)),
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+        <span class="cov0" title="0">return out.UserConfirmed, nil</span>
+}
+
+func (c *CognitoService) ConfirmUserSignup(confirmationCode, userName string) (bool, error) <span class="cov0" title="0">{
+        _, err := c.client.ConfirmSignUp(c.ctx, &amp;cog.ConfirmSignUpInput{
+                ClientId:         &amp;c.clientId,
+                ConfirmationCode: &amp;confirmationCode,
+                Username:         &amp;userName,
+                SecretHash:       aws.String(computeSecretHash(c.clientSecret, userName, c.clientId)),
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+        <span class="cov0" title="0">return true, nil</span>
+}
+
+func (c *CognitoService) AuthenticateUser(userName, password string) (map[string]string, error) <span class="cov0" title="0">{
+        c.setCsrp(userName, password)
+        out, err := c.client.InitiateAuth(c.ctx, &amp;cog.InitiateAuthInput{
+                AuthFlow:       cogTypes.AuthFlowTypeUserSrpAuth,
+                AuthParameters: c.csrp.GetAuthParams(),
+                ClientId:       aws.String(c.clientId),
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">if out.ChallengeName == "PASSWORD_VERIFIER" </span><span class="cov0" title="0">{
+                challengeResponses, err := c.csrp.PasswordVerifierChallenge(out.ChallengeParameters, time.Now())
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+                <span class="cov0" title="0">return challengeResponses, nil</span>
+        }
+        <span class="cov0" title="0">return nil, errors.New("only password verifiction supported")</span>
+}
+
+func (c *CognitoService) RespondToChallenge(challengeResponses map[string]string) (string, error) <span class="cov0" title="0">{
+        out, err := c.client.RespondToAuthChallenge(c.ctx, &amp;cog.RespondToAuthChallengeInput{
+                ChallengeName:      cogTypes.ChallengeNameTypePasswordVerifier,
+                ChallengeResponses: challengeResponses,
+                ClientId:           &amp;c.clientId,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+        <span class="cov0" title="0">return *out.Session, nil</span>
+}
+
+func (c *CognitoService) AssociateToken(sessionToken string) *CognitoSecret <span class="cov0" title="0">{
+        out, err := c.client.AssociateSoftwareToken(c.ctx, &amp;cog.AssociateSoftwareTokenInput{Session: &amp;sessionToken})
+        if err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov0" title="0">return &amp;CognitoSecret{SecretCode: *out.SecretCode, Session: *out.Session}</span>
+}
+
+func New(
+        ctx context.Context,
+        client CognitoProviderIface,
+        getCsrp func(string, string) (CsrpIface, error)) *CognitoService <span class="cov0" title="0">{
+        clientId := os.Getenv("APP_CLIENT_ID")
+        clientSecret := os.Getenv("APP_CLIENT_SECRET")
+        return &amp;CognitoService{
+                client:       client,
+                clientId:     clientId,
+                clientSecret: clientSecret,
+                csrp:         nil,
+                ctx:          ctx,
+                getCsrp:      getCsrp,
+        }
+}</span>
+
+func computeSecretHash(clientSecret string, username string, clientId string) string <span class="cov0" title="0">{
+        mac := hmac.New(sha256.New, []byte(clientSecret))
+        mac.Write([]byte(username + clientId))
+        return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+}</span>
+
+func SaveJson(fileName string, data any) <span class="cov0" title="0">{
+        bts, _ := json.Marshal(data)
+        os.WriteFile(fileName, bts, 0777)
+}</span>
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package cognito
+
+import (
+        "context"
+        "go-aws/internal/conf"
+
+        "github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
+)
+
+func InitCognito() *CognitoService <span class="cov0" title="0">{
+        ctx := context.Background()
+        cfg := conf.GetConfig(ctx)
+
+        client := cognitoidentityprovider.NewFromConfig(cfg)
+        getCsrp := GetCsrp
+        return New(ctx, client, getCsrp)
+}</span>
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package cognito
+
+import (
+        "os"
+
+        cognitosrp "github.com/alexrudd/cognito-srp/v2"
+)
+
+func GetCsrp(userName, password string) (CsrpIface, error) <span class="cov0" title="0">{
+        clientId := os.Getenv("APP_CLIENT_ID")
+        clientSecret := os.Getenv("APP_CLIENT_SECRET")
+        cognitoUserPool := os.Getenv("COGNITO_USER_POOL")
+        csrp, _ := cognitosrp.NewCognitoSRP(userName, password, cognitoUserPool, clientId, &amp;clientSecret)
+        return csrp, nil
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

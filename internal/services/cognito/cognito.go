@@ -65,7 +65,7 @@ func (c *CognitoService) setCsrp(userName, password string) {
 	}
 }
 
-func (c *CognitoService) RegisterUser(user types.UserRecord, password string) (bool, error) {
+func (c *CognitoService) RegisterUser(user types.User, password string) (bool, error) {
 	out, err := c.client.SignUp(c.ctx, &cog.SignUpInput{
 		ClientId:       aws.String(c.clientId),
 		Password:       aws.String(password),

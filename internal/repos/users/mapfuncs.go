@@ -9,7 +9,7 @@ import (
 	dbTypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 )
 
-func userToAttributeValueMap(user types.UserRecord) (map[string]dbTypes.AttributeValue, error) {
+func UserToAttributeValueMap(user types.User) (map[string]dbTypes.AttributeValue, error) {
 	av, err := attributevalue.MarshalMap(user)
 	if err != nil {
 		log.Println("error marshaling user", err)
@@ -19,8 +19,8 @@ func userToAttributeValueMap(user types.UserRecord) (map[string]dbTypes.Attribut
 	return av, nil
 }
 
-func userFromAttributeValueMap(attrMap map[string]dbTypes.AttributeValue) (*types.UserRecord, error) {
-	var user types.UserRecord
+func UserFromAttributeValueMap(attrMap map[string]dbTypes.AttributeValue) (*types.User, error) {
+	var user types.User
 	err := attributevalue.UnmarshalMap(attrMap, &user)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func userFromAttributeValueMap(attrMap map[string]dbTypes.AttributeValue) (*type
 	return &user, nil
 }
 
-func idToAttributeValue(userId string) map[string]dbTypes.AttributeValue {
+func IDToAttributeValue(userId string) map[string]dbTypes.AttributeValue {
 	return map[string]dbTypes.AttributeValue{
 		"ORGID":  &dbTypes.AttributeValueMemberS{Value: "ORGID#01HRR1VZRMQDJZR4FAP4M2ZF9V"},
 		"USERID": &dbTypes.AttributeValueMemberS{Value: userId}}

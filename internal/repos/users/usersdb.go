@@ -2,70 +2,74 @@ package users
 
 import (
 	"context"
-	"encoding/json"
-	"go-aws/internal/repos"
-	"go-aws/internal/repos/dynamo"
+
 	"go-aws/internal/types"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-type UserDbIface interface {
-	GetUser(userId string) (*types.UserRecord, error)
-	PutUser(rawUser types.UserRecord) error
-	RemoveUser(userId string) error
+type GenId func(string) string
+type DynamoIface interface {
+	DeleteItem(
+		context.Context,
+		*dynamodb.DeleteItemInput,
+		...func(*dynamodb.Options)) (*dynamodb.DeleteItemOutput, error)
+	GetItem(
+		context.Context,
+		*dynamodb.GetItemInput,
+		...func(*dynamodb.Options)) (*dynamodb.GetItemOutput, error)
+	PutItem(
+		context.Context,
+		*dynamodb.PutItemInput,
+		...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
 }
 
-type UserDb struct {
-	client      dynamo.DynamoIface
-	ctx         context.Context
-	idGenerator repos.GenId
+type UserRepo struct {
+	client      DynamoIface
+	idGenerator GenId
 	tableName   string
 }
 
-func (d *UserDb) PutUser(user types.UserRecord) error {
-	user.UserId = d.idGenerator("USER#")
-	marshaledUser, err := userToAttributeValueMap(user)
+func New(client DynamoIface, genId GenId) *UserRepo {
+	return &UserRepo{client: client, idGenerator: genId, tableName: os.Getenv("AWS_DYNAMO_TABLE")}
+}
+
+func (d *UserRepo) PutUser(ctx context.Context, user types.User) error {
+	user.UserID = d.idGenerator("USER#")
+	marshaledUser, err := UserToAttributeValueMap(user)
 	if err != nil {
 		return err
 	}
-	_, err = d.client.PutItem(d.ctx, &dynamodb.PutItemInput{
+	_, err = d.client.PutItem(ctx, &dynamodb.PutItemInput{
 		Item:      marshaledUser,
 		TableName: &d.tableName,
 	})
 	return err
 }
 
-func (d *UserDb) GetUser(userId string) (*types.UserRecord, error) {
-	out, err := d.client.GetItem(d.ctx, &dynamodb.GetItemInput{Key: idToAttributeValue(userId), TableName: &d.tableName})
+func (d *UserRepo) GetUser(ctx context.Context, userID string) (*types.User, error) {
+	out, err := d.client.GetItem(ctx, &dynamodb.GetItemInput{
+		Key: IDToAttributeValue(userID), TableName: &d.tableName,
+	})
 	if err != nil {
 		return nil, err
 	}
 	if out.Item == nil {
 		return nil, nil
 	}
-	user, err := userFromAttributeValueMap(out.Item)
+	user, err := UserFromAttributeValueMap(out.Item)
 	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-func (d *UserDb) RemoveUser(userId string) error {
-	_, err := d.client.DeleteItem(d.ctx, &dynamodb.DeleteItemInput{
-		Key: idToAttributeValue(userId), TableName: &d.tableName})
+func (d *UserRepo) RemoveUser(ctx context.Context, userId string) error {
+	_, err := d.client.DeleteItem(ctx, &dynamodb.DeleteItemInput{
+		Key: IDToAttributeValue(userId), TableName: &d.tableName})
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func New(ctx context.Context, client dynamo.DynamoIface, genId repos.GenId) UserDbIface {
-	return &UserDb{ctx: ctx, client: client, idGenerator: genId, tableName: os.Getenv("AWS_DYNAMO_TABLE")}
-}
-
-func SaveJson(data any) {
-	bts, _ := json.Marshal(data)
-	os.WriteFile("response.json", bts, 0777)
 }

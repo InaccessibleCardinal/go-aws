@@ -3,14 +3,14 @@ package users
 import (
 	"context"
 	"go-aws/internal/conf"
-	"go-aws/internal/repos"
 	"go-aws/internal/repos/dynamo"
+	"go-aws/internal/repos/ids"
 )
 
-func InitUsersDB(ctx context.Context) UserDbIface {
-	idGenerator := repos.CreateId
+func InitUsersDB(ctx context.Context) *UserRepo {
+	idGenerator := ids.CreateId
 	cfg := conf.GetConfig(ctx)
 	client := dynamo.GetClient(cfg)
 
-	return New(ctx, client, idGenerator)
+	return New(client, idGenerator)
 }

@@ -1,7 +1,7 @@
 package types
 
-type UserRecord struct {
-	UserId   string `json:"userId" dynamodbav:"USERID"`
+type User struct {
+	UserID   string `json:"userId" dynamodbav:"USERID"`
 	UserName string `json:"userName"`
 	Email    string `json:"email"`
 }
