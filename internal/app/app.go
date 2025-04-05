@@ -5,7 +5,6 @@ import (
 	"go-aws/internal/controllers"
 	"go-aws/internal/env"
 	usersRepo "go-aws/internal/repos/users"
-	"go-aws/internal/routers/types"
 	"net/http"
 
 	"github.com/go-chi/chi/middleware"
@@ -14,7 +13,7 @@ import (
 
 type App struct {
 	usersController *controllers.UsersController
-	router          types.Router
+	router          *chi.Mux
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +30,7 @@ func (a *App) routes() {
 	a.router.Put("/users", a.usersController.PutUser)
 }
 
-func New(router types.Router, usersController *controllers.UsersController) *App {
+func New(router *chi.Mux, usersController *controllers.UsersController) *App {
 	return &App{router: router, usersController: usersController}
 }
 
