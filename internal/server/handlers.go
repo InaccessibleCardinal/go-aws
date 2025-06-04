@@ -1,25 +1,19 @@
-package controllers
+package server
 
 import (
 	"encoding/json"
-	"go-aws/internal/repos/users"
 	"go-aws/internal/types"
 	"io"
+	"log"
 	"net/http"
-	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
-type UsersController struct {
-	db *users.UserRepo
-}
-
-func NewUsersController(db *users.UserRepo) *UsersController {
-	return &UsersController{db: db}
-}
-
-func (u *UsersController) GetUser(w http.ResponseWriter, r *http.Request) {
-	id := getID(r.URL.Path)
-	user, err := u.db.GetUser(r.Context(), id)
+func (s *Server) GetUser(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	log.Printf("getting user by id: %s\n", id)
+	user, err := s.userDBGet(r.Context(), "USER#"+id)
 	if err != nil {
 		ErrorResponse(w, err)
 		return
@@ -27,23 +21,18 @@ func (u *UsersController) GetUser(w http.ResponseWriter, r *http.Request) {
 	SuccessResponse(w, user)
 }
 
-func (u *UsersController) PutUser(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PutUser(w http.ResponseWriter, r *http.Request) {
 	user, err := getUserFromBody(r.Body)
 	if err != nil {
 		ErrorResponse(w, err)
 		return
 	}
-	err = u.db.PutUser(r.Context(), *user)
+	err = s.userDBPut(r.Context(), *user)
 	if err != nil {
 		ErrorResponse(w, err)
 		return
 	}
 	CreatedResponse(w, map[string]string{"message": "user created"})
-}
-
-func getID(path string) string {
-	parts := strings.Split(path, "/")
-	return parts[1]
 }
 
 func getUserFromBody(body io.ReadCloser) (*types.User, error) {

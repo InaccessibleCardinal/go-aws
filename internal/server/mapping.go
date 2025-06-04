@@ -1,4 +1,4 @@
-package users
+package server
 
 import (
 	"go-aws/internal/types"
