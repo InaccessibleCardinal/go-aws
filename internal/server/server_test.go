@@ -131,6 +131,49 @@ func TestServer_400(t *testing.T) {
 	})
 }
 
+func Test_putNilUser(t *testing.T) {
+	testDB := &testDynamoDB{}
+	router := chi.NewMux()
+	app := Server{
+		db:          testDB,
+		idGenerator: fnID,
+		router:      router,
+		server:      &http.Server{Addr: addr, Handler: router},
+		userTable:   "users",
+	}
+
+	go app.Run()
+
+	res, err := http.Post("http://localhost"+addr+"/users", applicationJSON, nil)
+
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusBadRequest, res.StatusCode)
+
+	t.Cleanup(func() {
+		if err := app.server.Shutdown(context.Background()); err != nil {
+			t.Fatalf("error shutting down server %s", err)
+		}
+	})
+}
+
+type badBody string
+
+func (b badBody) Read(p []byte) (n int, err error) {
+	return 0, errors.New(string(b))
+}
+
+func (b badBody) Close() error {
+	return nil
+}
+
+func Test_getUserFromBody(t *testing.T) {
+	var body badBody = "error reading"
+	user, err := getUserFromBody(body)
+
+	assert.Nil(t, user)
+	assert.EqualError(t, err, "error reading")
+}
+
 type testDynamoDB struct {
 	getOutput    *dynamodb.GetItemOutput
 	errGet       error
